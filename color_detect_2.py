@@ -1,21 +1,16 @@
 import cv2
 import numpy as np
 
-# Known BGR values for reference colors (example: white, gray, red, green, blue)
+# Known BGR values for reference colors (example: white, gray, etc.)
 ideal_colors = {
     "white": np.array([255, 255, 255]),
-    "gray": np.array([127, 127, 127]),
-    "red": np.array([0, 0, 255]),
-    "green": np.array([0, 255, 0]),
-    "blue": np.array([255, 0, 0]),
 }
 
-# Placeholder for calculated correction factors
-correction_factors = np.array([1.0, 1.0, 1.0])
+# Placeholder for calculated correction offsets
+correction_offsets = np.array([0.0, 0.0, 0.0])
 
 def capture_reference_color(image):
-    # Manually set ROI to capture reference color (e.g., a white patch)
-    # Adjust the coordinates as needed for your reference object
+    # Set ROI to capture reference color (adjust for your reference object)
     x_start, y_start, x_end, y_end = 100, 100, 200, 200
     roi = image[y_start:y_end, x_start:x_end]
     
@@ -23,10 +18,10 @@ def capture_reference_color(image):
     avg_bgr = roi.mean(axis=(0, 1))
     return avg_bgr
 
-def calculate_correction_factors(avg_bgr, ideal_bgr):
-    # Calculate the correction factor for each channel
-    factors = ideal_bgr / avg_bgr
-    return factors
+def calculate_correction_offsets(avg_bgr, ideal_bgr):
+    # Calculate the offset for each BGR channel
+    offsets = ideal_bgr - avg_bgr
+    return offsets
 
 # Set up video capture
 cap = cv2.VideoCapture(0)
@@ -38,9 +33,9 @@ if ret:
     measured_bgr = capture_reference_color(ref_image)
     print(f"Measured BGR for reference: {measured_bgr}")
 
-    # Calculate correction factors (assuming we're comparing to a white reference here)
-    correction_factors = calculate_correction_factors(measured_bgr, ideal_colors["white"])
-    print(f"Correction factors: {correction_factors}")
+    # Calculate correction offsets
+    correction_offsets = calculate_correction_offsets(measured_bgr, ideal_colors["white"])
+    print(f"Correction offsets: {correction_offsets}")
 else:
     print("Failed to capture reference image")
 
@@ -50,10 +45,11 @@ while True:
     if not ret:
         break
 
-    # Apply correction to each pixel in the frame
-    corrected_frame = (frame * correction_factors).clip(0, 255).astype(np.uint8)
+    # Apply correction to each pixel by adding offset
+    corrected_frame = frame + correction_offsets
+    corrected_frame = np.clip(corrected_frame, 0, 255).astype(np.uint8)
 
-    # Define the 33% ROI (example: bottom right area)
+    # Define the 33% ROI (bottom right area)
     height, width, _ = frame.shape
     x_start = width // 2
     y_start = height // 2
